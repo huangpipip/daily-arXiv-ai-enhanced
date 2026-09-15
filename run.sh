@@ -64,16 +64,14 @@ echo "本地测试：爬取 $today 的arXiv论文... / Local test: Crawling $tod
 echo "步骤1：开始爬取... / Step 1: Starting crawl..."
 
 # 检查今日文件是否已存在，如存在则删除 / Check if today's file exists, delete if found
-if [ -f "data/${today}.jsonl" ]; then
-    echo "🗑️ 发现今日文件已存在，正在删除重新生成... / Found existing today's file, deleting for fresh start..."
-    rm "data/${today}.jsonl"
-    echo "✅ 已删除现有文件：data/${today}.jsonl / Deleted existing file: data/${today}.jsonl"
-else
-    echo "📝 今日文件不存在，准备新建... / Today's file doesn't exist, ready to create new one..."
-fi
+rm -f "data/${today}.jsonl" "data/${today}.raw.jsonl"
 
 cd daily_arxiv
-scrapy crawl arxiv -o ../data/${today}.jsonl
+scrapy crawl arxiv -O ../data/${today}.raw.jsonl
+python daily_arxiv/enrich.py \
+    --input ../data/${today}.raw.jsonl \
+    --output ../data/${today}.jsonl
+rm -f ../data/${today}.raw.jsonl
 
 if [ ! -f "../data/${today}.jsonl" ]; then
     echo "爬取失败，未生成数据文件 / Crawling failed, no data file generated"

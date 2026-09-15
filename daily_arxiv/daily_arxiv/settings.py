@@ -60,14 +60,9 @@ ROBOTSTXT_OBEY = True
 #    "scrapy.extensions.telnet.TelnetConsole": None,
 # }
 
-# Configure item pipelines
-# See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
-# 配置数据处理管道 / Configure item processing pipelines
-# 数字越小优先级越高 / Lower numbers have higher priority
-ITEM_PIPELINES = {
-    # 主要数据保存管道 / Main data saving pipeline
-    "daily_arxiv.pipelines.DailyArxivPipeline": 300,
-}
+# Metadata enrichment is performed in one batched pass after the listing crawl.
+# Keeping the per-item pipeline disabled prevents one arXiv API request per paper.
+ITEM_PIPELINES = {}
 
 # Enable and configure the AutoThrottle extension (disabled by default)
 # See https://docs.scrapy.org/en/latest/topics/autothrottle.html
@@ -93,3 +88,4 @@ ITEM_PIPELINES = {
 # Set settings whose default value is deprecated to a future-proof value
 TWISTED_REACTOR = "twisted.internet.asyncioreactor.AsyncioSelectorReactor"
 FEED_EXPORT_ENCODING = "utf-8"
+LOG_LEVEL = "INFO"
