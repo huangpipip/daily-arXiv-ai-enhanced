@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="A PDF-first reader for the daily condensed-matter arXiv feed">
+  <title>arXiv Reading Room</title>
+  <link rel="icon" type="image/png" href="../assets/logo2-removebg-preview.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <link rel="stylesheet" href="styles.css?v=1.0.1">
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script>
+    window.MathJax = { tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] } };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <script src="../js/auth-config.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/data-config.js"></script>
+  <script>
+    Auth.logout = function () {
+      localStorage.removeItem(AUTH_CONFIG.storageKey);
+      localStorage.removeItem(AUTH_CONFIG.storageExpireKey);
+      window.location.href = '../login.html';
+    };
+    if (Auth.isPasswordEnabled() && !Auth.isAuthenticated()) {
+      window.location.href = '../login.html?redirect=new/index.html';
+    }
+    window.addEventListener('DOMContentLoaded', () => {
+      const logoutButton = document.getElementById('logoutButton');
+      if (logoutButton && Auth.isPasswordEnabled()) logoutButton.style.display = 'inline-flex';
+    });
+  </script>
+</head>
+<body class="reading-room">
+  <div class="ambient ambient-one" aria-hidden="true"></div>
+  <div class="ambient ambient-two" aria-hidden="true"></div>
+
+  <div class="app-container">
+    <header class="workspace-header">
+      <div class="header-content">
+        <div class="header-center">
+          <a class="site-logo" href="./" aria-label="arXiv Reading Room home">
+            <span class="logo-mark" aria-hidden="true">
+              <svg viewBox="0 0 32 32"><path d="M8 5h11l5 5v17H8z"/><path d="M19 5v6h6M12 16h8M12 20h8"/></svg>
+            </span>
+            <span>
+              <span class="site-kicker">DAILY RESEARCH DESK</span>
+              <span class="site-title">Reading Room</span>
+            </span>
+          </a>
+        </div>
+
+        <div class="header-side-left">
+          <div class="data-source-selector">
+            <label for="dataSourceSelect">Library</label>
+            <select id="dataSourceSelect" aria-label="Select data source"></select>
+          </div>
+        </div>
+
+        <div class="header-controls">
+          <button id="calendarButton" class="date-trigger" type="button" aria-label="Select date">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3v3m12-3v3M4 9h16M5 5h14a1 1 0 0 1 1 1v14H4V6a1 1 0 0 1 1-1Z"/></svg>
+            <span>
+              <small>Edition</small>
+              <strong id="currentDate">Loading…</strong>
+            </span>
+          </button>
+          <a class="icon-button" href="../statistic.html" title="Statistics" aria-label="Statistics">
+            <svg viewBox="0 0 24 24"><path d="M5 19V9m7 10V5m7 14v-7"/></svg>
+          </a>
+          <a class="icon-button" href="../settings.html" title="Settings" aria-label="Settings">
+            <svg viewBox="0 0 24 24"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="m19.4 15 .1.1-1.9 3.3-.2-.1-2.1-.8a8 8 0 0 1-1.3.8l-.3 2.2H10l-.3-2.2a8 8 0 0 1-1.3-.8l-2.1.8-.2.1-1.9-3.3.1-.1 1.8-1.4a8 8 0 0 1 0-1.6l-1.8-1.4-.1-.1 1.9-3.3.2.1 2.1.8a8 8 0 0 1 1.3-.8l.3-2.2h3.8l.3 2.2a8 8 0 0 1 1.3.8l2.1-.8.2-.1 1.9 3.3-.1.1-1.8 1.4a8 8 0 0 1 0 1.6Z"/></svg>
+          </a>
+          <button id="themeToggle" class="icon-button" type="button" title="Toggle theme" aria-label="Toggle theme">
+            <svg id="themeIcon" viewBox="0 0 24 24"><path d="M19 14.8A8 8 0 0 1 9.2 5 7.5 7.5 0 1 0 19 14.8Z"/></svg>
+          </button>
+          <button id="logoutButton" class="icon-button logout-button" type="button" title="Logout" aria-label="Logout" onclick="Auth.logout()" style="display: none">
+            <svg viewBox="0 0 24 24"><path d="M10 5H5v14h5m4-4 4-3-4-3m4 3H9"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="catalog-bar">
+        <details class="category-label-container" open>
+          <summary>
+            <span>Collections</span>
+            <svg viewBox="0 0 20 20"><path d="m6 8 4 4 4-4"/></svg>
+          </summary>
+          <div class="category-scroll">
+            <button class="category-button active" data-category="all">All</button>
+          </div>
+        </details>
+
+        <div class="filter-label-container">
+          <span class="filter-nav-label">Focus</span>
+          <div id="textSearchContainer" class="text-search">
+            <button id="textSearchToggle" type="button" aria-label="Focus search">
+              <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m16 16 4 4"/></svg>
+            </button>
+            <div class="search-input-wrapper">
+              <input id="textSearchInput" type="search" placeholder="Search title, author, abstract…" aria-label="Search papers">
+              <button id="textSearchClear" class="clear-x" type="button" title="Clear" hidden>×</button>
+            </div>
+          </div>
+          <div class="filter-scroll" id="filterTags"></div>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="intro-band" aria-labelledby="desk-title">
+        <div>
+          <span class="eyebrow">CURATED · SUMMARIZED · READABLE</span>
+          <h1 id="desk-title">CTCMP <em>Daily</em></h1>
+        </div>
+        <p>Browse the shortlist, then open a paper to enter the PDF workspace. Use <kbd>[</kbd> <kbd>]</kbd> to move and <kbd>space</kbd> to wander.</p>
+      </section>
+
+      <div class="date-picker-modal" id="datePickerModal" role="dialog" aria-modal="true" aria-label="Select edition">
+        <div class="date-picker-content">
+          <div class="date-picker-body">
+            <span class="eyebrow">ARCHIVE</span>
+            <h3 class="date-picker-title">Choose an edition</h3>
+            <div class="flatpickr-container"><input type="text" id="datepicker" placeholder="Select Date" data-input></div>
+            <div class="date-range-selector">
+              <span class="toggle-label">Read a date range</span>
+              <label class="toggle-switch">
+                <input type="checkbox" id="dateRangeMode">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <section class="paper-library" aria-label="Paper library">
+        <div class="section-heading">
+          <span>Paper queue</span>
+          <span class="rule"></span>
+          <span>Open any document to read</span>
+        </div>
+        <div class="paper-container" id="paperContainer">
+          <div class="loading-container"><span class="loading-spinner"></span><p>Assembling today’s reading list…</p></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="paper-modal" id="paperModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="paper-modal-content">
+      <div class="paper-modal-header">
+        <div class="reader-brand"><span class="reader-dot"></span><span>PDF WORKSPACE</span></div>
+        <h2 id="modalTitle">Paper</h2>
+        <div class="paper-modal-header-actions">
+          <div id="readerLayoutSwitch" class="reader-layout-switch" role="radiogroup" aria-label="阅读布局">
+            <button type="button" role="radio" aria-checked="false" data-reader-layout="info-left" aria-label="说明在左侧" data-tooltip="说明在左侧">
+              <span class="layout-option-preview preview-info-left" aria-hidden="true"><i></i><i></i></span>
+            </button>
+            <button type="button" role="radio" aria-checked="true" data-reader-layout="info-right" aria-label="说明在右侧" data-tooltip="说明在右侧">
+              <span class="layout-option-preview preview-info-right" aria-hidden="true"><i></i><i></i></span>
+            </button>
+            <button type="button" role="radio" aria-checked="false" data-reader-layout="pdf-only" aria-label="仅显示 PDF" data-tooltip="仅显示 PDF">
+              <span class="layout-option-preview preview-pdf-only" aria-hidden="true"><i></i></span>
+            </button>
+          </div>
+          <button type="button" class="button icon-button" title="Previous paper" aria-label="Previous paper" data-paper-nav="prev">
+            <svg viewBox="0 0 24 24"><path d="m15 5-7 7 7 7"/></svg>
+          </button>
+          <button type="button" class="button icon-button" title="Next paper" aria-label="Next paper" data-paper-nav="next">
+            <svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></svg>
+          </button>
+          <button id="closeModal" class="icon-button close-button" type="button" title="Close" aria-label="Close reader">
+            <svg viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="paper-modal-body" id="modalBody"></div>
+
+      <div class="paper-modal-footer">
+        <div class="paper-navigation">
+          <span id="paperPosition" class="paper-position">–</span>
+          <span class="navigation-hint">[ / ] navigate · space shuffle</span>
+        </div>
+        <div class="paper-modal-buttons">
+          <div class="paper-modal-nav-buttons">
+            <button type="button" class="button icon-button" title="Previous paper" aria-label="Previous paper" data-paper-nav="prev"><svg viewBox="0 0 24 24"><path d="m15 5-7 7 7 7"/></svg></button>
+            <button type="button" class="button icon-button" title="Next paper" aria-label="Next paper" data-paper-nav="next"><svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></svg></button>
+          </div>
+          <a id="kimiChatLink" class="reader-action" href="#" target="_blank" rel="noopener" title="Ask AI"><span>AI</span></a>
+          <a id="pdfLink" class="reader-action" href="#" target="_blank" rel="noopener" title="Open PDF"><span>PDF</span></a>
+          <a id="htmlLink" class="reader-action" href="#" target="_blank" rel="noopener" title="Open HTML"><span>HTML</span></a>
+          <a id="githubLink" class="reader-action" href="#" target="_blank" rel="noopener" title="Open GitHub" style="display: none"><span>CODE</span></a>
+          <a id="paperLink" class="reader-action primary" href="#" target="_blank" rel="noopener" title="Open abstract"><span>ARXIV ↗</span></a>
+        </div>
+      </div>
+      <div class="paper-modal-resize-handle" aria-hidden="true"></div>
+    </div>
+  </div>
+
+  <footer><span>Daily arXiv · PDF-first edition</span><a href="../index.html">Return to classic view</a></footer>
+  <button id="backToTop" class="back-to-top" type="button" title="Back to top" aria-label="Back to top"><svg viewBox="0 0 24 24"><path d="m6 14 6-6 6 6"/></svg></button>
+
+  <script src="../js/app.js?v=1.0.3"></script>
+  <script src="shell.js?v=1.0.1"></script>
+</body>
+</html>

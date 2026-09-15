@@ -103,6 +103,33 @@ button {
   background-color: rgba(102, 126, 234, 0.1);
 }
 
+.new-reader-entry {
+  width: auto;
+  min-width: max-content;
+  padding: 0 13px;
+  gap: 7px;
+  color: white;
+  background: var(--gradient-primary);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  box-shadow: var(--shadow-sm);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.new-reader-entry:hover {
+  color: white;
+  background: var(--gradient-primary);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.new-reader-entry svg {
+  width: 19px;
+  height: 19px;
+}
+
 /* 视图控制按钮样式 */
 .view-controls {
   display: flex;
@@ -1486,6 +1513,12 @@ input:checked + .toggle-slider:before {
   .header-controls {
     margin-left: auto;
     gap: 10px;
+  }
+
+  .new-reader-entry {
+    height: 34px;
+    padding: 0 10px;
+    font-size: 11px;
   }
 
   .header-side-left {
