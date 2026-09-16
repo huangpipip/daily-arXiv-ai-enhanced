@@ -5,7 +5,7 @@ const CACHE_PREFIX = 'ctcmp-';
 const APP_SHELL = [
   './',
   './index.html',
-  './styles.css?v=1.1.5',
+  './styles.css?v=1.1.6',
   './shell.js?v=1.1.2',
   './app.webmanifest',
   '../js/app.js?v=1.1.0',
