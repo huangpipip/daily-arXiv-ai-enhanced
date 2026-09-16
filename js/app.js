@@ -764,13 +764,13 @@ function initEventListeners() {
   const calendarButton = document.getElementById('calendarButton');
   calendarButton.addEventListener('click', (e) => {
     e.stopPropagation();
-    toggleDatePicker();
+    openDatePicker();
   });
   
   const datePickerModal = document.querySelector('.date-picker-modal');
   datePickerModal.addEventListener('click', (event) => {
     if (event.target === datePickerModal) {
-      toggleDatePicker();
+      closeDatePicker();
     }
   });
   
@@ -835,7 +835,7 @@ function initEventListeners() {
       }
       // 关闭日期选择器模态框
       else if (datePickerModal.classList.contains('active')) {
-        toggleDatePicker();
+        closeDatePicker();
       }
     }
     // [ 和 ] 导航论文（仅在论文模态框打开时）
@@ -1187,14 +1187,14 @@ function initDatePicker() {
         const endDate = formatDateForAPI(selectedDates[1]);
         const requestId = nextDataRequestId();
         loadPapersByDateRange(startDate, endDate, requestId, currentDataSource);
-        toggleDatePicker();
+        closeDatePicker();
       } else if (!isRangeMode && selectedDates.length === 1) {
         // 处理单个日期选择
         const selectedDate = formatDateForAPI(selectedDates[0]);
         // if (availableDates.includes(selectedDate)) {
           const requestId = nextDataRequestId();
           loadPapersByDate(selectedDate, requestId, currentDataSource);
-          toggleDatePicker();
+          closeDatePicker();
         // }
       }
     }
@@ -1888,6 +1888,14 @@ function showPaperDetails(paper, paperIndex) {
   const paperUrl = getPaperDetailUrl(paper, currentDataSource);
   const pdfUrl = getPaperPdfUrl(paper, currentDataSource);
   const htmlUrl = getPaperHtmlUrl(paper, currentDataSource);
+  const mobilePdfLink = document.body.classList.contains('reading-room') ? `
+    <a class="mobile-pdf-link" href="${pdfUrl}" target="_blank" rel="noopener" aria-label="Open the complete PDF in a new tab">
+      <span class="mobile-pdf-link-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M14 3h7v7M21 3l-9 9M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
+      </span>
+      <span><strong>OPEN FULL PDF</strong><small>View the complete paper in a new tab</small></span>
+      <span class="mobile-pdf-link-arrow" aria-hidden="true">→</span>
+    </a>` : '';
   
   // 重置模态框的滚动位置
   modalBody.scrollTop = 0;
@@ -1971,6 +1979,7 @@ function showPaperDetails(paper, paperIndex) {
       ${highlightedAbstract ? `<h3>Abstract</h3><p class="original-abstract">${highlightedAbstract}</p>` : ''}
       
       <div class="pdf-preview-section">
+        ${mobilePdfLink}
         <div class="pdf-header">
           <h3>PDF Preview</h3>
           <button class="pdf-expand-btn" onclick="togglePdfSize(this)">
@@ -2113,11 +2122,13 @@ function showRandomPaperIndicator() {
   }, 3000);
 }
 
-function toggleDatePicker() {
+function setDatePickerOpen(isOpen) {
   const datePicker = document.getElementById('datePickerModal');
-  datePicker.classList.toggle('active');
+  if (!datePicker) return;
+
+  datePicker.classList.toggle('active', isOpen);
   
-  if (datePicker.classList.contains('active')) {
+  if (isOpen) {
     document.body.style.overflow = 'hidden';
     
     // 重新初始化日期选择器以确保它反映最新的可用日期
@@ -2125,6 +2136,20 @@ function toggleDatePicker() {
   } else {
     document.body.style.overflow = '';
   }
+}
+
+function openDatePicker() {
+  setDatePickerOpen(true);
+}
+
+function closeDatePicker() {
+  setDatePickerOpen(false);
+}
+
+function toggleDatePicker() {
+  const datePicker = document.getElementById('datePickerModal');
+  if (!datePicker) return;
+  setDatePickerOpen(!datePicker.classList.contains('active'));
 }
 
 function toggleView() {
