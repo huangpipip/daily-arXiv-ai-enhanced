@@ -624,15 +624,15 @@ body.theme-dark .flatpickr-day.flatpickr-disabled { color: #4e5752; }
   .reader-brand { display: none; }
   .paper-modal-header h2 { font-size: 17px; }
   .navigation-hint { display: none; }
-  body.is-standalone .workspace-header { padding-top: env(safe-area-inset-top); }
+  body.is-standalone .workspace-header { padding-top: max(env(safe-area-inset-top, 0px), 44px); }
   body.is-standalone .install-app-button { display: none !important; }
-  body.is-standalone .paper-modal { padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
+  body.is-standalone .paper-modal { padding-top: max(env(safe-area-inset-top, 0px), 44px); padding-bottom: 0; }
   body.is-standalone .paper-modal-footer { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
 }
 
 @media (display-mode: standalone) and (max-width: 899px) {
-  .workspace-header { padding-top: env(safe-area-inset-top, 0px); }
-  .paper-modal { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .workspace-header { padding-top: max(env(safe-area-inset-top, 0px), 44px); }
+  .paper-modal { padding-top: max(env(safe-area-inset-top, 0px), 44px); padding-bottom: 0; }
 }
 
 @media (max-width: 620px) {
