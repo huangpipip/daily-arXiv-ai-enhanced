@@ -294,7 +294,7 @@ kbd { display: inline-grid; min-width: 23px; height: 23px; margin: 0 2px; color:
 .paper-card-categories { display: flex; flex-wrap: wrap; gap: 5px; }
 .category-tag { padding: 4px 7px; color: #496258; background: #e8ede8; border-radius: 5px; font-size: 9px; font-weight: 700; letter-spacing: .04em; }
 .paper-card-body { display: flex; flex: 1; flex-direction: column; }
-.paper-card-summary { display: -webkit-box; margin: 22px 0; overflow: hidden; color: #6c746f; font-size: 12px; line-height: 1.58; -webkit-box-orient: vertical; -webkit-line-clamp: 5; }
+.paper-card-summary { display: -webkit-box; margin: 22px 0; overflow: hidden; color: #6c746f; font-size: 14px; line-height: 1.65; -webkit-box-orient: vertical; -webkit-line-clamp: 5; }
 .paper-card-footer { display: flex; z-index: 1; align-items: center; justify-content: space-between; margin-top: auto; padding-top: 15px; border-top: 1px solid var(--line); }
 .paper-card-date { color: #8d948f; font-size: 10px; font-weight: 600; }
 .paper-card-link { position: relative; color: #315c4c; font-size: 10px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; }
@@ -460,12 +460,12 @@ kbd { display: inline-grid; min-width: 23px; height: 23px; margin: 0 2px; color:
 .paper-details > p { margin: 0; padding: 2px 3px; color: #b6c0ba; font-size: 11px; line-height: 1.55; }
 .paper-details > p strong { color: #76847c; font-size: 9px; letter-spacing: .08em; text-transform: uppercase; }
 .paper-details > h3 { margin: 18px 3px 7px; color: #eff4f0; font-family: "Newsreader", serif; font-size: 22px; font-weight: 500; }
-.paper-details > h3 + p { color: #cbd4ce; font-size: 12px; line-height: 1.65; }
+.paper-details > h3 + p { color: #cbd4ce; font-size: 14px; line-height: 1.75; }
 .paper-details .paper-sections { display: grid; gap: 8px; margin-top: 14px; }
 .paper-section { padding: 13px 14px; background: #303934; border: 1px solid rgba(255,255,255,.08); border-radius: 10px; }
 .paper-section h4 { margin: 0 0 5px; color: var(--accent); font-size: 9px; letter-spacing: .12em; text-transform: uppercase; }
-.paper-section p { margin: 0; color: #b9c4bd; font-size: 11px; line-height: 1.6; }
-.original-abstract { margin-bottom: 20px !important; color: #aeb9b2 !important; }
+.paper-section p { margin: 0; color: #b9c4bd; font-size: 13px; line-height: 1.72; }
+.original-abstract { margin-bottom: 20px !important; color: #aeb9b2 !important; font-size: 13px !important; line-height: 1.72 !important; }
 
 .pdf-preview-section {
   position: sticky;
