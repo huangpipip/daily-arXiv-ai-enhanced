@@ -2,15 +2,22 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="description" content="A PDF-first reader for the daily condensed-matter arXiv feed">
-  <title>arXiv Reading Room</title>
-  <link rel="icon" type="image/png" href="../assets/logo2-removebg-preview.png">
+  <meta name="theme-color" content="#151a17">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="CTCMP Daily">
+  <title>CTCMP Daily</title>
+  <link rel="manifest" href="app.webmanifest">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/icons/favicon-32.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="../assets/icons/apple-touch-icon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-  <link rel="stylesheet" href="styles.css?v=1.0.6">
+  <link rel="stylesheet" href="styles.css?v=1.1.2">
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   <script>
     window.MathJax = { tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] } };
@@ -48,19 +55,25 @@
             </span>
             <span>
               <span class="site-kicker">DAILY RESEARCH DESK</span>
-              <span class="site-title">Reading Room</span>
+              <span class="site-title">CTCMP Daily</span>
             </span>
           </a>
         </div>
 
         <div class="header-side-left">
           <div class="data-source-selector">
-            <label for="dataSourceSelect">Library</label>
+            <label for="dataSourceSelect">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="5" rx="7" ry="3"/><path d="M5 5v6c0 1.7 3.1 3 7 3s7-1.3 7-3V5M5 11v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6"/></svg>
+              <span>Library</span>
+            </label>
             <select id="dataSourceSelect" aria-label="Select data source"></select>
           </div>
         </div>
 
         <div class="header-controls">
+          <button id="installAppButton" class="icon-button install-app-button" type="button" title="Add to Home Screen" aria-label="Add CTCMP Daily to Home Screen" hidden>
+            <svg viewBox="0 0 24 24"><path d="M12 3v11m0 0 4-4m-4 4-4-4M5 17v3h14v-3"/></svg>
+          </button>
           <button id="calendarButton" class="date-trigger" type="button" aria-label="Select date">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3v3m12-3v3M4 9h16M5 5h14a1 1 0 0 1 1 1v14H4V6a1 1 0 0 1 1-1Z"/></svg>
             <span>
@@ -149,6 +162,29 @@
     </main>
   </div>
 
+  <div id="installPromptBackdrop" class="install-prompt-backdrop" hidden></div>
+  <aside id="installPrompt" class="install-prompt" role="dialog" aria-modal="true" aria-labelledby="installPromptTitle" hidden>
+    <button id="installPromptClose" class="install-prompt-close" type="button" aria-label="Close installation guide">×</button>
+    <img src="../assets/icons/ctcmp-app-icon-192.png" width="64" height="64" alt="">
+    <div class="install-prompt-copy">
+      <span class="eyebrow">YOUR DAILY READING APP</span>
+      <h2 id="installPromptTitle">Add CTCMP Daily to your Home Screen</h2>
+      <p id="installPromptDescription">Open today’s research queue in one tap, with a focused full-screen reading experience.</p>
+      <div id="installPromptSteps" class="install-prompt-steps"></div>
+    </div>
+    <div class="install-prompt-actions">
+      <button id="installPromptDismiss" type="button">Not now</button>
+      <button id="installPromptAction" class="primary" type="button">Add to Home Screen</button>
+    </div>
+  </aside>
+
+  <nav class="standalone-dock" aria-label="App shortcuts">
+    <button type="button" data-standalone-action="today"><svg viewBox="0 0 24 24"><path d="M5 6h14v14H5zM8 3v6m8-6v6M5 10h14"/></svg><span>Today</span></button>
+    <button type="button" data-standalone-action="calendar"><svg viewBox="0 0 24 24"><path d="M6 3v3m12-3v3M4 9h16M5 5h14a1 1 0 0 1 1 1v14H4V6a1 1 0 0 1 1-1Z"/></svg><span>Archive</span></button>
+    <button type="button" data-standalone-action="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m16 16 4 4"/></svg><span>Search</span></button>
+    <button type="button" data-standalone-action="random"><svg viewBox="0 0 24 24"><path d="M4 7h3c4 0 6 10 10 10h3M17 4l3 3-3 3M4 17h3c1.4 0 2.5-1.2 3.5-2.8M15 7.8c.7-.5 1.3-.8 2-.8h3M17 14l3 3-3 3"/></svg><span>Wander</span></button>
+  </nav>
+
   <div class="paper-modal" id="paperModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
     <div class="paper-modal-content">
       <div class="paper-modal-header">
@@ -204,7 +240,7 @@
   <footer><span>Daily arXiv · PDF-first edition</span><a href="../index.html">Return to classic view</a></footer>
   <button id="backToTop" class="back-to-top" type="button" title="Back to top" aria-label="Back to top"><svg viewBox="0 0 24 24"><path d="m6 14 6-6 6 6"/></svg></button>
 
-  <script src="../js/app.js?v=1.0.5"></script>
-  <script src="shell.js?v=1.0.1"></script>
+  <script src="../js/app.js?v=1.1.0"></script>
+  <script src="shell.js?v=1.1.1"></script>
 </body>
 </html>

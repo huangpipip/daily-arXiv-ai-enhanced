@@ -17,6 +17,7 @@
 }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 
 html { scroll-behavior: smooth; }
 
@@ -102,6 +103,7 @@ body.header-collapsed .workspace-header { transform: translateY(-76px); }
   letter-spacing: .1em;
   text-transform: uppercase;
 }
+.data-source-selector label svg { display: none; }
 
 .data-source-selector select {
   max-width: 220px;
@@ -134,6 +136,7 @@ body.header-collapsed .workspace-header { transform: translateY(-76px); }
 .icon-button:hover { color: var(--accent); background: rgba(255,255,255,.06); border-color: var(--line-dark); transform: translateY(-1px); }
 .icon-button:disabled { opacity: .28; cursor: not-allowed; transform: none; }
 .logout-button { color: var(--danger); }
+.install-app-button { color: var(--accent); background: rgba(108,245,194,.08); border-color: rgba(108,245,194,.2); }
 
 .date-trigger {
   justify-content: flex-start;
@@ -523,6 +526,44 @@ footer a { color: var(--accent); }
 .back-to-top.visible { visibility: visible; opacity: 1; transform: translateY(0); }
 .back-to-top svg { width: 19px; }
 
+.install-prompt-backdrop {
+  position: fixed;
+  z-index: 900;
+  inset: 0;
+  background: rgba(6,10,8,.66);
+  backdrop-filter: blur(10px);
+}
+.install-prompt {
+  position: fixed;
+  z-index: 910;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 18px;
+  width: min(520px, calc(100vw - 32px));
+  padding: 24px;
+  color: #edf3ef;
+  background: #171d1a;
+  border: 1px solid rgba(255,255,255,.13);
+  border-radius: 22px;
+  box-shadow: 0 28px 90px rgba(0,0,0,.5);
+  transform: translate(-50%, -50%);
+}
+.install-prompt > img { border-radius: 15px; box-shadow: 0 8px 22px rgba(0,0,0,.28); }
+.install-prompt-copy { display: grid; gap: 8px; }
+.install-prompt-copy h2 { margin: 0; font-family: "Newsreader", serif; font-size: 28px; font-weight: 500; line-height: 1.05; }
+.install-prompt-copy p { margin: 0; color: #aeb8b2; font-size: 12px; line-height: 1.55; }
+.install-prompt-steps { color: #d7dfda; font-size: 12px; line-height: 1.55; }
+.install-prompt-steps strong { color: var(--accent); }
+.install-prompt-actions { display: flex; grid-column: 1 / -1; justify-content: flex-end; gap: 8px; margin-top: 3px; }
+.install-prompt-actions button { min-height: 42px; padding: 0 15px; color: #b6c0ba; background: transparent; border: 1px solid var(--line-dark); border-radius: 10px; cursor: pointer; }
+.install-prompt-actions .primary { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); font-weight: 700; }
+.install-prompt-close { position: absolute; top: 10px; right: 10px; display: grid; width: 34px; height: 34px; color: #9da8a1; background: transparent; border: 0; border-radius: 9px; cursor: pointer; font-size: 25px; place-items: center; }
+.install-prompt-close:hover { color: var(--accent); background: rgba(255,255,255,.06); }
+
+.standalone-dock { display: none; }
+
 body.theme-dark {
   --ink: #edf3ef;
   --ink-soft: #a2aea7;
@@ -559,11 +600,17 @@ body.theme-dark .flatpickr-day.flatpickr-disabled { color: #4e5752; }
   .date-trigger span { display: none; }
   .header-controls { gap: 2px; margin-left: 8px; }
   .header-controls > a:first-of-type { display: none; }
-  .catalog-bar { display: grid; gap: 9px; padding: 10px 16px 12px; }
-  .category-label-container { display: grid; gap: 8px; }
+  .catalog-bar { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 9px; padding: 10px 16px 12px; }
+  .catalog-bar > .header-side-left { display: flex; grid-column: 1; grid-row: 1; width: 44px; justify-self: start; }
+  .catalog-bar .data-source-selector { position: relative; display: grid; width: 44px; height: 44px; color: var(--accent); background: rgba(108,245,194,.07); border: 1px solid rgba(108,245,194,.2); border-radius: 11px; place-items: center; }
+  .catalog-bar .data-source-selector label { display: grid; pointer-events: none; place-items: center; }
+  .catalog-bar .data-source-selector label span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .catalog-bar .data-source-selector label svg { display: block; width: 21px; height: 21px; }
+  .catalog-bar .data-source-selector select { position: absolute; inset: 0; width: 100%; height: 100%; padding: 0; opacity: 0; cursor: pointer; }
+  .category-label-container { display: grid; grid-column: 2; grid-row: 1; gap: 8px; }
   .category-label-container summary { display: flex; }
   .category-scroll { padding-bottom: 2px; }
-  .filter-label-container { width: 100%; min-width: 0; margin: 0; }
+  .filter-label-container { grid-column: 1 / -1; width: 100%; min-width: 0; margin: 0; }
   .filter-nav-label { display: none; }
   .text-search { flex: 1 0 230px; }
   .filter-scroll { max-width: 40vw; }
@@ -579,10 +626,35 @@ body.theme-dark .flatpickr-day.flatpickr-disabled { color: #4e5752; }
   .reader-brand { display: none; }
   .paper-modal-header h2 { font-size: 17px; }
   .navigation-hint { display: none; }
+  body.is-standalone { padding-bottom: calc(72px + env(safe-area-inset-bottom)); }
+  body.is-standalone .workspace-header { padding-top: env(safe-area-inset-top); }
+  body.is-standalone .install-app-button { display: none !important; }
+  body.is-standalone .standalone-dock {
+    position: fixed;
+    z-index: 120;
+    right: 10px;
+    bottom: calc(8px + env(safe-area-inset-bottom));
+    left: 10px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    padding: 6px;
+    color: #aeb8b2;
+    background: rgba(18,24,20,.94);
+    border: 1px solid rgba(255,255,255,.13);
+    border-radius: 17px;
+    box-shadow: 0 18px 50px rgba(0,0,0,.38);
+    backdrop-filter: blur(18px);
+  }
+  .standalone-dock button { display: grid; min-width: 0; min-height: 50px; padding: 5px; color: inherit; background: transparent; border: 0; border-radius: 11px; cursor: pointer; font-size: 9px; gap: 2px; place-items: center; }
+  .standalone-dock button:active { color: var(--accent); background: rgba(108,245,194,.08); }
+  .standalone-dock svg { width: 20px; height: 20px; }
+  body.is-standalone .paper-modal { padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
+  body.is-standalone .paper-modal-footer { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
 }
 
 @media (max-width: 620px) {
   .header-controls .icon-button[href*="settings"], #themeToggle { display: none; }
+  .header-controls .icon-button, .date-trigger { min-width: 44px; width: 44px; height: 44px; }
   .paper-container { grid-template-columns: 1fr; }
   .paper-card { min-height: 285px; padding: 23px; }
   .paper-card-title { font-size: 27px; }
@@ -592,11 +664,12 @@ body.theme-dark .flatpickr-day.flatpickr-disabled { color: #4e5752; }
   .paper-modal-header { grid-template-columns: minmax(0, 1fr); gap: 8px; min-height: 58px; padding: 12px 12px 10px; }
   .paper-modal-header h2 { width: 100%; padding: 0; font-size: 19px; line-height: 1.2; }
   .paper-modal-header-actions { width: 100%; padding: 0; justify-content: flex-end; }
-  .reader-layout-switch button { width: 34px; }
+  .reader-layout-switch button { width: 40px; height: 40px; }
+  .paper-modal-header .icon-button, .paper-modal-footer .icon-button { width: 44px; height: 44px; }
   .paper-modal-footer { flex-direction: column; align-items: stretch; gap: 8px; min-height: 54px; padding: 8px; }
   .paper-navigation { justify-content: flex-start; }
   .paper-modal-buttons { flex-wrap: wrap; justify-content: flex-end; gap: 3px; }
-  .reader-action { min-width: 36px; padding: 0 7px; }
+  .reader-action { min-width: 44px; height: 44px; padding: 0 8px; }
   .pdf-preview-section,
   .paper-modal[data-reader-layout="pdf-only"] .pdf-preview-section { height: auto; min-height: 0; margin-bottom: 18px; background: transparent; border: 0; box-shadow: none; }
   .pdf-preview-section .pdf-header,
@@ -620,6 +693,21 @@ body.theme-dark .flatpickr-day.flatpickr-disabled { color: #4e5752; }
   .mobile-pdf-link small { font-size: 10px; line-height: 1.35; opacity: .7; }
   .mobile-pdf-link-arrow { font-size: 24px; line-height: 1; }
   footer { gap: 20px; }
+  .install-prompt {
+    top: auto;
+    right: 10px;
+    bottom: calc(10px + env(safe-area-inset-bottom));
+    left: 10px;
+    grid-template-columns: 56px minmax(0, 1fr);
+    width: auto;
+    padding: 20px 18px 18px;
+    border-radius: 20px;
+    transform: none;
+  }
+  .install-prompt > img { width: 56px; height: 56px; border-radius: 13px; }
+  .install-prompt-copy h2 { padding-right: 22px; font-size: 24px; }
+  .install-prompt-actions { display: grid; grid-template-columns: .8fr 1.2fr; }
+  .install-prompt-actions button { min-height: 46px; padding: 0 10px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

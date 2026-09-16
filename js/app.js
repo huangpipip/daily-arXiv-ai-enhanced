@@ -1880,6 +1880,7 @@ function renderPapers() {
 
 function showPaperDetails(paper, paperIndex) {
   const modal = document.getElementById('paperModal');
+  const wasModalOpen = modal.classList.contains('active');
   const modalTitle = document.getElementById('modalTitle');
   const modalBody = document.getElementById('modalBody');
   const paperLink = document.getElementById('paperLink');
@@ -2028,15 +2029,24 @@ function showPaperDetails(paper, paperIndex) {
     paperPosition.textContent = '-';
   }
   updatePaperNavigationControls();
+
+  if (!wasModalOpen && document.body.classList.contains('reading-room')) {
+    try { history.pushState({ ...history.state, ctcmpPaperReader: true }, ''); } catch (_) { /* History can be unavailable for local previews. */ }
+  }
   
   modal.classList.add('active');
   document.body.style.overflow = 'hidden';
   MathJax.typeset();
 }
 
-function closeModal() {
+function closeModal(fromHistory = false) {
   const modal = document.getElementById('paperModal');
   const modalBody = document.getElementById('modalBody');
+
+  if (!fromHistory && document.body.classList.contains('reading-room') && modal.classList.contains('active') && history.state?.ctcmpPaperReader) {
+    history.back();
+    return;
+  }
   
   // 重置模态框的滚动位置
   modalBody.scrollTop = 0;
