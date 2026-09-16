@@ -137,6 +137,8 @@ body.header-collapsed .workspace-header { transform: translateY(-76px); }
 .icon-button:disabled { opacity: .28; cursor: not-allowed; transform: none; }
 .logout-button { color: var(--danger); }
 .install-app-button { color: var(--accent); background: rgba(108,245,194,.08); border-color: rgba(108,245,194,.2); }
+.refresh-app-button.is-refreshing svg { animation: refresh-spin .8s linear infinite; }
+@keyframes refresh-spin { to { transform: rotate(360deg); } }
 
 .date-trigger {
   justify-content: flex-start;

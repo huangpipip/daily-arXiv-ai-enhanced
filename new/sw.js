@@ -1,12 +1,12 @@
-const STATIC_CACHE = 'ctcmp-static-v2';
-const RUNTIME_CACHE = 'ctcmp-runtime-v2';
+const STATIC_CACHE = 'ctcmp-static-v3';
+const RUNTIME_CACHE = 'ctcmp-runtime-v3';
 const CACHE_PREFIX = 'ctcmp-';
 
 const APP_SHELL = [
   './',
   './index.html',
-  './styles.css?v=1.1.9',
-  './shell.js?v=1.1.2',
+  './styles.css?v=1.2.0',
+  './shell.js?v=1.2.0',
   './app.webmanifest',
   '../js/app.js?v=1.1.0',
   '../js/auth-config.js',

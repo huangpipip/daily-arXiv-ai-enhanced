@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-  <link rel="stylesheet" href="styles.css?v=1.1.9">
+  <link rel="stylesheet" href="styles.css?v=1.2.0">
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   <script>
     window.MathJax = { tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] } };
@@ -73,6 +73,9 @@
         <div class="header-controls">
           <button id="installAppButton" class="icon-button install-app-button" type="button" title="Add to Home Screen" aria-label="Add CTCMP Daily to Home Screen" hidden>
             <svg viewBox="0 0 24 24"><path d="M12 3v11m0 0 4-4m-4 4-4-4M5 17v3h14v-3"/></svg>
+          </button>
+          <button id="refreshAppButton" class="icon-button refresh-app-button" type="button" title="Refresh app cache" aria-label="Refresh app cache">
+            <svg viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M6.1 8.5A7 7 0 0 1 18.8 7M17.9 15.5A7 7 0 0 1 5.2 17"/></svg>
           </button>
           <button id="calendarButton" class="date-trigger" type="button" aria-label="Select date">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3v3m12-3v3M4 9h16M5 5h14a1 1 0 0 1 1 1v14H4V6a1 1 0 0 1 1-1Z"/></svg>
@@ -232,6 +235,6 @@
   <button id="backToTop" class="back-to-top" type="button" title="Back to top" aria-label="Back to top"><svg viewBox="0 0 24 24"><path d="m6 14 6-6 6 6"/></svg></button>
 
   <script src="../js/app.js?v=1.1.0"></script>
-  <script src="shell.js?v=1.1.2"></script>
+  <script src="shell.js?v=1.2.0"></script>
 </body>
 </html>

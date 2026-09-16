@@ -97,6 +97,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   const installButton = document.getElementById('installAppButton');
+  const refreshButton = document.getElementById('refreshAppButton');
   const installPrompt = document.getElementById('installPrompt');
   const installBackdrop = document.getElementById('installPromptBackdrop');
   const installClose = document.getElementById('installPromptClose');
@@ -168,6 +169,35 @@ document.addEventListener('DOMContentLoaded', () => {
     deferredInstallPrompt = null;
     if (installButton) installButton.hidden = true;
     closeInstallPrompt();
+  });
+
+  refreshButton?.addEventListener('click', async () => {
+    if (!navigator.onLine) {
+      window.alert('当前处于离线状态，无法刷新应用缓存。');
+      return;
+    }
+
+    refreshButton.disabled = true;
+    refreshButton.classList.add('is-refreshing');
+    refreshButton.setAttribute('aria-label', 'Refreshing app cache');
+
+    try {
+      if ('caches' in window) {
+        const cacheKeys = await caches.keys();
+        await Promise.all(cacheKeys.filter(key => key.startsWith('ctcmp-')).map(key => caches.delete(key)));
+      }
+      if ('serviceWorker' in navigator) {
+        const registration = await navigator.serviceWorker.getRegistration('./');
+        if (registration) await registration.update();
+      }
+      window.location.reload();
+    } catch (error) {
+      console.error('App cache refresh failed:', error);
+      refreshButton.disabled = false;
+      refreshButton.classList.remove('is-refreshing');
+      refreshButton.setAttribute('aria-label', 'Refresh app cache');
+      window.alert('刷新缓存失败，请稍后重试。');
+    }
   });
 
   if (!isStandalone && window.matchMedia('(max-width: 899px)').matches) {
