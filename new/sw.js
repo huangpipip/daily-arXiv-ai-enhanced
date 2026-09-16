@@ -1,5 +1,5 @@
-const STATIC_CACHE = 'ctcmp-static-v1';
-const RUNTIME_CACHE = 'ctcmp-runtime-v1';
+const STATIC_CACHE = 'ctcmp-static-v2';
+const RUNTIME_CACHE = 'ctcmp-runtime-v2';
 const CACHE_PREFIX = 'ctcmp-';
 
 const APP_SHELL = [
@@ -22,7 +22,12 @@ const APP_SHELL = [
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(STATIC_CACHE)
-      .then(cache => Promise.allSettled(APP_SHELL.map(url => cache.add(new Request(url, { cache: 'reload' })))))
+      .then(cache => Promise.allSettled(APP_SHELL.map(async url => {
+        const request = new Request(url, { cache: 'reload' });
+        const response = await fetch(request);
+        if (!isCacheableResponse(response)) return;
+        await cache.put(request, await removeRedirectMetadata(response));
+      })))
       .then(() => self.skipWaiting())
   );
 });
@@ -41,6 +46,20 @@ self.addEventListener('activate', event => {
 
 function isCacheableResponse(response) {
   return response && (response.ok || response.type === 'opaque');
+}
+
+async function removeRedirectMetadata(response) {
+  if (!response.redirected || response.type === 'opaque') return response;
+
+  const headers = new Headers(response.headers);
+  headers.delete('content-encoding');
+  headers.delete('content-length');
+
+  return new Response(await response.blob(), {
+    status: response.status,
+    statusText: response.statusText,
+    headers
+  });
 }
 
 function isPdfRequest(url) {
@@ -64,8 +83,11 @@ function staleWhileRevalidate(event) {
   const cacheKey = cacheKeyFor(request);
   const networkUpdate = caches.open(cacheName).then(async cache => {
     const response = await fetch(request, { cache: 'no-cache' });
-    if (isCacheableResponse(response)) await cache.put(cacheKey, response.clone());
-    return response;
+    if (!isCacheableResponse(response)) return response;
+
+    const cacheableResponse = await removeRedirectMetadata(response);
+    await cache.put(cacheKey, cacheableResponse.clone());
+    return cacheableResponse;
   });
 
   event.waitUntil(networkUpdate.catch(() => undefined));
