@@ -630,6 +630,11 @@ body.theme-dark .flatpickr-day.flatpickr-disabled { color: #4e5752; }
   body.is-standalone .paper-modal-footer { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
 }
 
+@media (display-mode: standalone) and (max-width: 899px) {
+  .workspace-header { padding-top: env(safe-area-inset-top, 0px); }
+  .paper-modal { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+}
+
 @media (max-width: 620px) {
   .header-controls .icon-button[href*="settings"], #themeToggle { display: none; }
   .header-controls .icon-button, .date-trigger { min-width: 44px; width: 44px; height: 44px; }
