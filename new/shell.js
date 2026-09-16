@@ -181,21 +181,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (visits >= 2 && Date.now() > dismissedUntil) setTimeout(openInstallPrompt, 1600);
   }
 
-  document.querySelector('.standalone-dock')?.addEventListener('click', event => {
-    const action = event.target.closest('[data-standalone-action]')?.dataset.standaloneAction;
-    if (!action) return;
-    if (action === 'today') {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    } else if (action === 'calendar') {
-      document.getElementById('calendarButton')?.click();
-    } else if (action === 'search') {
-      document.getElementById('textSearchToggle')?.click();
-      setTimeout(() => document.getElementById('textSearchInput')?.focus(), 0);
-    } else if (action === 'random' && typeof window.showRandomPaper === 'function') {
-      window.showRandomPaper();
-    }
-  });
-
   if (isStandalone) {
     const scrollStorageKey = 'ctcmp-standalone-scroll-y';
     let savedScrollY = 0;
