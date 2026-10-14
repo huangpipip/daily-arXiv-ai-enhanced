@@ -51,6 +51,23 @@ class DedupTests(unittest.TestCase):
         self.assertEqual(self.dedup(), "error")
         self.assertEqual(self.today.read_text(), "{invalid\n")
 
+    def test_recrawl_today_keeps_today_ids_but_filters_previous_days(self):
+        self.write(self.today, ["today", "yesterday", "new", "today"])
+        self.write(self.history / self.today.name, ["today"])
+        self.write(self.history / "2026-10-13.jsonl", ["yesterday"])
+        self.assertEqual(perform_deduplication(
+            self.today, self.history, "2026-10-14", recrawl_today=True), "has_new_content")
+        self.assertEqual(self.ids(self.today), ["today", "new"])
+
+    def test_cli_recrawl_today_reprocesses_published_paper(self):
+        self.write(self.today, ["a"])
+        self.write(self.history / self.today.name, ["a"])
+        with patch("sys.argv", ["check_stats.py", "--input", str(self.today),
+                                "--history-dir", str(self.history), "--date", "2026-10-14",
+                                "--recrawl-today"]):
+            self.assertEqual(main(), 0)
+        self.assertEqual(self.ids(self.today), ["a"])
+
     def test_corrupt_history_is_error_and_preserves_input(self):
         self.write(self.today, ["a"])
         before = self.today.read_bytes()
@@ -87,6 +104,16 @@ class DedupTests(unittest.TestCase):
         for name in [self.today.name, "2026-10-14_AI_enhanced_Chinese.jsonl"]:
             self.assertEqual(self.ids(self.data / name), ["a", "b", "c"])
             self.assertEqual(self.ids(self.history / name), ["a", "b"])
+
+    def test_recrawl_merge_updates_existing_paper_without_losing_other_papers(self):
+        for name in [self.today.name, "2026-10-14_AI_enhanced_Chinese.jsonl"]:
+            self.write(self.history / name, ["a", "b"])
+            (self.data / name).write_text(json.dumps({"id": "a", "title": "refreshed"}) + "\n")
+        merge_daily(self.data, self.history, "2026-10-14", "Chinese")
+        for name in [self.today.name, "2026-10-14_AI_enhanced_Chinese.jsonl"]:
+            records = [json.loads(line) for line in (self.data / name).read_text().splitlines()]
+            self.assertEqual([row["id"] for row in records], ["a", "b"])
+            self.assertEqual(records[0]["title"], "refreshed")
 
 
 if __name__ == "__main__":

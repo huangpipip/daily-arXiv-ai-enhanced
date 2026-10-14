@@ -42,7 +42,7 @@ def save_papers_data(papers, file_path):
         temporary.unlink(missing_ok=True)
 
 
-def perform_deduplication(input_path=None, history_dir=None, crawl_date=None):
+def perform_deduplication(input_path=None, history_dir=None, crawl_date=None, recrawl_today=False):
     day = date.fromisoformat(crawl_date) if crawl_date else datetime.now(timezone.utc).date()
     input_path = Path(input_path or f"../data/{day}.jsonl")
     history_dir = Path(history_dir) if history_dir is not None else input_path.parent
@@ -57,14 +57,15 @@ def perform_deduplication(input_path=None, history_dir=None, crawl_date=None):
         if not papers:
             return "no_data"
         history_ids = set()
-        for offset in range(8):
+        for offset in range(1 if recrawl_today else 0, 8):
             history_path = history_dir / f"{day - timedelta(days=offset)}.jsonl"
             # Without a separate snapshot, today's input is not published history.
             if history_path.resolve() == input_path.resolve():
                 continue
             _, ids = load_papers_data(history_path)
             history_ids.update(ids)
-        print(f"当天及此前7日去重库大小: {len(history_ids)}", file=sys.stderr)
+        window = "此前7日" if recrawl_today else "当天及此前7日"
+        print(f"{window}去重库大小: {len(history_ids)}", file=sys.stderr)
         seen_ids = set(history_ids)
         new_papers = []
         for paper in papers:
@@ -87,9 +88,12 @@ def main():
     parser.add_argument("--input", type=Path)
     parser.add_argument("--history-dir", type=Path)
     parser.add_argument("--date", dest="crawl_date", type=date.fromisoformat)
+    parser.add_argument("--recrawl-today", action="store_true",
+                        help="Reprocess today's published IDs while keeping previous-seven-day deduplication")
     args = parser.parse_args()
     status = perform_deduplication(args.input, args.history_dir,
-                                  args.crawl_date.isoformat() if args.crawl_date else None)
+                                  args.crawl_date.isoformat() if args.crawl_date else None,
+                                  recrawl_today=args.recrawl_today)
     print(f"去重结果: {status}", file=sys.stderr)
     return {"has_new_content": 0, "no_new_content": 1, "no_data": 1, "error": 2}[status]
 

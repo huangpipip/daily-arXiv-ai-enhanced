@@ -54,6 +54,12 @@ later that day, only those receive AI processing, then their results are merged
 with the day's published files before Markdown generation. Invalid history or
 input JSON stops the workflow. Workflow runs are serialized to avoid concurrent
 processing of the same papers.
+For a manual run, enable **`recrawl_today`** in **Actions → arXiv-daily-ai-enhanced →
+Run workflow** to fetch the current RSS again and regenerate today's AI results.
+It defaults to off; scheduled runs keep normal deduplication. When enabled, only
+same-day deduplication is bypassed, previous-seven-day duplicates are still
+filtered, and refreshed papers replace their same-day published results by ID.
+“Today” uses UTC; the source remains the current RSS feed, not a historical feed.
 
 To fetch RSS data locally without running AI processing:
 

@@ -8,6 +8,12 @@ on:
     # Run after the daily RSS refresh (07:30 UTC / 15:30 China time).
     - cron: "30 7 * * *"
   workflow_dispatch:
+    inputs:
+      recrawl_today:
+        description: "重新抓取并重新进行当日 AI 处理（仍保留此前七日去重）"
+        type: boolean
+        required: false
+        default: false
 
 concurrency:
   group: arxiv-daily-${{ github.ref }}
@@ -66,17 +72,24 @@ jobs:
         
     - name: Check for duplicates
       id: dedup_check
+      env:
+        RECRAWL_TODAY: ${{ inputs.recrawl_today || false }}
       run: |
         source .venv/bin/activate
         echo "执行去重检查... / Performing intelligent deduplication check..."
         
         cd daily_arxiv
+        dedup_options=()
+        if [ "$RECRAWL_TODAY" = "true" ]; then
+          echo "重新抓取当日：忽略当天已发布 ID，仍检查此前七日历史"
+          dedup_options+=(--recrawl-today)
+        fi
         # 执行去重检查脚本 / Execute intelligent deduplication check script
         set +e  # 暂时允许命令失败 / Temporarily allow command failure
         python daily_arxiv/check_stats.py \
           --input "../data/${{ steps.crawl_step.outputs.crawl_date }}.jsonl" \
           --date "${{ steps.crawl_step.outputs.crawl_date }}" \
-          --history-dir "$ARXIV_HISTORY_DIR"
+          --history-dir "$ARXIV_HISTORY_DIR" "${dedup_options[@]}"
         
         # 获取退出码 / Get exit code
         dedup_exit_code=$?
