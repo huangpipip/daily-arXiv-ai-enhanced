@@ -5,7 +5,8 @@ name: arXiv-daily-ai-enhanced
 
 on:
   schedule:
-    - cron: "30 2 * * *"
+    # Run after the daily RSS refresh (07:30 UTC / 15:30 China time).
+    - cron: "30 7 * * *"
   workflow_dispatch:
 
 
@@ -29,8 +30,6 @@ jobs:
         today=$(date -u "+%Y-%m-%d")
         echo "开始爬取 $today 的arXiv论文... / Starting to crawl $today arXiv papers..."
         
-        rm -f "data/${today}.jsonl" "data/${today}.raw.jsonl"
-        
         cd daily_arxiv
         export OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
         export OPENAI_BASE_URL=${{ secrets.OPENAI_BASE_URL }}
@@ -39,13 +38,9 @@ jobs:
         export CATEGORIES="${{ vars.CATEGORIES }}"
         export MODEL_NAME="${{ vars.MODEL_NAME }}"
         
-        # 先从列表页抓取并去重，再按分类从 RSS 补齐摘要，避免逐篇请求 legacy API。
-        # Crawl and deduplicate listings, then fetch one RSS feed per category.
-        scrapy crawl arxiv -O ../data/${today}.raw.jsonl
+        # RSS 是论文和摘要的唯一数据源 / RSS is the only source of papers and abstracts.
         python daily_arxiv/enrich.py \
-          --input ../data/${today}.raw.jsonl \
           --output ../data/${today}.jsonl
-        rm -f ../data/${today}.raw.jsonl
         
         # 检查爬取是否成功 / Check if crawling was successful
         if [ ! -f "../data/${today}.jsonl" ]; then

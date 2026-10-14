@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Enrich arXiv listing records with abstracts from official RSS feeds."""
+"""Fetch arXiv papers and abstracts directly from official RSS feeds."""
 
 from __future__ import annotations
 
@@ -31,37 +31,6 @@ class MetadataFetchError(RuntimeError):
     """Raised when complete RSS metadata cannot be retrieved."""
 
 
-def load_candidates(path: Path) -> list[dict[str, Any]]:
-    """Load candidate papers, deduplicating IDs while preserving their order."""
-    candidates: dict[str, dict[str, Any]] = {}
-
-    with path.open(encoding="utf-8") as handle:
-        for line_number, line in enumerate(handle, start=1):
-            if not line.strip():
-                continue
-            try:
-                item = json.loads(line)
-            except json.JSONDecodeError as error:
-                raise ValueError(f"Invalid JSON on line {line_number} of {path}") from error
-
-            paper_id = str(item.get("id", "")).strip()
-            if not paper_id:
-                raise ValueError(f"Missing paper ID on line {line_number} of {path}")
-
-            if paper_id not in candidates:
-                candidates[paper_id] = item
-                candidates[paper_id]["id"] = paper_id
-                candidates[paper_id]["categories"] = list(item.get("categories") or [])
-                continue
-
-            existing = candidates[paper_id]["categories"]
-            for category in item.get("categories") or []:
-                if category not in existing:
-                    existing.append(category)
-
-    return list(candidates.values())
-
-
 def parse_rss(content: bytes) -> dict[str, dict[str, Any]]:
     """Parse metadata needed by this project from an arXiv RSS document."""
     try:
@@ -69,13 +38,22 @@ def parse_rss(content: bytes) -> dict[str, dict[str, Any]]:
     except ET.ParseError as error:
         raise MetadataFetchError("arXiv returned invalid RSS XML") from error
 
+    channel = root.find("channel")
+    if root.tag != "rss" or channel is None:
+        raise MetadataFetchError("arXiv returned a document that is not RSS 2.0")
+    LOGGER.info(
+        "RSS announcement date: %s; last build: %s",
+        channel.findtext("pubDate"),
+        channel.findtext("lastBuildDate"),
+    )
+
     papers: dict[str, dict[str, Any]] = {}
     for item in root.findall("./channel/item"):
         link = (item.findtext("link") or "").strip()
         paper_id = link.rstrip("/").rsplit("/", 1)[-1]
         paper_id = re.sub(r"v\d+$", "", paper_id)
-        if not paper_id:
-            continue
+        if "/abs/" not in link or not paper_id:
+            raise MetadataFetchError("RSS paper is missing an abstract link")
 
         description = html.unescape(item.findtext("description") or "").strip()
         summary = ABSTRACT_PREFIX.sub("", description, count=1).strip()
@@ -86,16 +64,22 @@ def parse_rss(content: bytes) -> dict[str, dict[str, Any]]:
         ]
         creator = item.findtext("{http://purl.org/dc/elements/1.1/}creator") or ""
 
+        title = (item.findtext("title") or "").strip()
+        announce_type = (item.findtext(f"{{{ARXIV_NAMESPACE}}}announce_type") or "").strip()
+        if not title or not summary or not categories or not creator.strip():
+            raise MetadataFetchError(f"RSS paper {paper_id} has incomplete metadata")
+        if announce_type not in {"new", "cross", "replace", "replace-cross"}:
+            raise MetadataFetchError(f"RSS paper {paper_id} has an invalid announcement type")
+
         papers[paper_id] = {
-            "title": (item.findtext("title") or "").strip(),
+            "title": title,
             "authors": [name.strip() for name in creator.split(",") if name.strip()],
             "categories": categories,
             "summary": summary,
-            "announce_type": item.findtext(f"{{{ARXIV_NAMESPACE}}}announce_type"),
+            "announce_type": announce_type,
         }
 
-    if not papers:
-        raise MetadataFetchError("arXiv RSS feed contained no papers")
+    # Valid empty feeds occur on weekends, holidays, and quiet category days.
     return papers
 
 
@@ -160,43 +144,36 @@ class RssClient:
         raise AssertionError("unreachable")
 
 
-def enrich_candidates(
-    candidates: Sequence[dict[str, Any]], client: RssClient
-) -> list[dict[str, Any]]:
-    """Fetch each source RSS feed once and require every candidate to be present."""
-    categories = list(
-        dict.fromkeys(
-            item.get("source_category")
-            for item in candidates
-            if item.get("source_category")
-        )
-    )
-    if candidates and not categories:
-        raise MetadataFetchError("Candidate records do not contain source_category")
+def fetch_papers(categories: Sequence[str], client: RssClient) -> list[dict[str, Any]]:
+    """Collect new/cross announcements with a target primary category, once per ID."""
+    categories = list(dict.fromkeys(cat.strip() for cat in categories if cat.strip()))
+    if not categories:
+        raise ValueError("At least one arXiv category must be configured")
+    targets = set(categories)
 
     metadata: dict[str, dict[str, Any]] = {}
     for index, category in enumerate(categories, start=1):
         LOGGER.info("Fetching RSS category %d/%d: %s", index, len(categories), category)
-        metadata.update(client.fetch_category(category))
-
-    missing = [item["id"] for item in candidates if item["id"] not in metadata]
-    if missing:
-        raise MetadataFetchError(
-            f"RSS feeds omitted {len(missing)} candidate paper(s): {', '.join(missing[:10])}"
-        )
+        papers = client.fetch_category(category)
+        LOGGER.info("RSS category %s returned %d papers", category, len(papers))
+        for paper_id, paper in papers.items():
+            if paper["announce_type"] not in {"new", "cross"}:
+                continue
+            if paper["categories"][0] not in targets:
+                continue
+            metadata.setdefault(paper_id, paper)
 
     records = []
-    for item in candidates:
-        rss = metadata[item["id"]]
+    for paper_id, rss in metadata.items():
         records.append(
             {
-                "id": item["id"],
-                "pdf": f"https://arxiv.org/pdf/{item['id']}",
-                "abs": f"https://arxiv.org/abs/{item['id']}",
-                "authors": item.get("authors") or rss["authors"],
-                "title": item.get("title") or rss["title"],
-                "categories": rss["categories"] or item.get("categories") or [],
-                "comment": item.get("comment"),
+                "id": paper_id,
+                "pdf": f"https://arxiv.org/pdf/{paper_id}",
+                "abs": f"https://arxiv.org/abs/{paper_id}",
+                "authors": rss["authors"],
+                "title": rss["title"],
+                "categories": rss["categories"],
+                "comment": None,
                 "summary": rss["summary"],
             }
         )
@@ -218,7 +195,10 @@ def write_jsonl_atomic(records: Iterable[dict[str, Any]], output_path: Path) -> 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--input", required=True, type=Path, help="Raw JSONL from Scrapy")
+    parser.add_argument(
+        "--categories", default=os.environ.get("CATEGORIES", "cs.CV"),
+        help="Comma-separated arXiv categories (defaults to CATEGORIES or cs.CV)",
+    )
     parser.add_argument("--output", required=True, type=Path, help="Enriched JSONL path")
     parser.add_argument(
         "--request-delay",
@@ -251,8 +231,6 @@ def main() -> int:
     args = build_parser().parse_args()
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
-    candidates = load_candidates(args.input)
-    LOGGER.info("Loaded %d unique paper IDs", len(candidates))
     client = RssClient(
         request_delay=max(3.0, args.request_delay),
         timeout=args.timeout,
@@ -260,7 +238,7 @@ def main() -> int:
         backoff_seconds=args.backoff_seconds,
         user_agent=args.user_agent,
     )
-    records = enrich_candidates(candidates, client)
+    records = fetch_papers(args.categories.split(","), client)
     write_jsonl_atomic(records, args.output)
     LOGGER.info("Wrote %d complete records to %s", len(records), args.output)
     return 0

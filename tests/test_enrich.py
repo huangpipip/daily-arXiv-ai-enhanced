@@ -2,15 +2,15 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import requests
 
 from daily_arxiv.daily_arxiv.enrich import (
     MetadataFetchError,
     RssClient,
-    enrich_candidates,
-    load_candidates,
+    fetch_papers,
+    main,
     parse_rss,
     write_jsonl_atomic,
 )
@@ -44,25 +44,6 @@ class FakeRssClient:
 
 
 class EnrichTests(unittest.TestCase):
-    def test_load_candidates_deduplicates_and_merges_categories(self):
-        with tempfile.TemporaryDirectory() as directory:
-            path = Path(directory) / "raw.jsonl"
-            path.write_text(
-                "\n".join(
-                    [
-                        json.dumps({"id": "1234.00001", "categories": ["cs.AI"]}),
-                        json.dumps({"id": "1234.00001", "categories": ["cs.LG"]}),
-                        json.dumps({"id": "1234.00002", "categories": []}),
-                    ]
-                ),
-                encoding="utf-8",
-            )
-
-            candidates = load_candidates(path)
-
-        self.assertEqual([item["id"] for item in candidates], ["1234.00001", "1234.00002"])
-        self.assertEqual(candidates[0]["categories"], ["cs.AI", "cs.LG"])
-
     def test_parse_rss_extracts_complete_metadata(self):
         papers = parse_rss(RSS)
 
@@ -71,32 +52,66 @@ class EnrichTests(unittest.TestCase):
         self.assertEqual(papers["1234.00001"]["categories"], ["cs.AI", "cs.LG"])
         self.assertEqual(papers["1234.00001"]["summary"], "First & complete abstract.")
 
-    def test_enrich_fetches_each_category_once_and_preserves_listing_authors(self):
+    def test_fetches_configured_categories_once_and_deduplicates_papers(self):
         rss_paper = parse_rss(RSS)["1234.00001"]
-        candidates = [
-            {
-                "id": "1234.00001",
-                "source_category": "cs.AI",
-                "authors": ["Ada Lovelace"],
-                "title": "Paper One",
-                "categories": ["cs.AI"],
-                "comment": "10 pages",
-            }
-        ]
-        client = FakeRssClient({"cs.AI": {"1234.00001": rss_paper}})
+        client = FakeRssClient({
+            "cs.AI": {"1234.00001": rss_paper},
+            "cs.LG": {"1234.00001": {**rss_paper, "announce_type": "cross"}},
+        })
 
-        records = enrich_candidates(candidates, client)
+        records = fetch_papers(["cs.AI", " cs.LG ", "cs.AI", ""], client)
 
-        self.assertEqual(client.calls, ["cs.AI"])
-        self.assertEqual(records[0]["authors"], ["Ada Lovelace"])
+        self.assertEqual(client.calls, ["cs.AI", "cs.LG"])
+        self.assertEqual(len(records), 1)
+        self.assertEqual(records[0]["authors"], ["Ada Author", "Bob Writer"])
         self.assertEqual(records[0]["summary"], "First & complete abstract.")
-        self.assertEqual(records[0]["comment"], "10 pages")
+        self.assertEqual(records[0]["abs"], "https://arxiv.org/abs/1234.00001")
+        self.assertEqual(records[0]["pdf"], "https://arxiv.org/pdf/1234.00001")
+        self.assertIsNone(records[0]["comment"])
 
-    def test_missing_rss_result_fails_instead_of_returning_partial_data(self):
-        candidates = [{"id": "1234.00002", "source_category": "cs.AI"}]
+    def test_filters_replacements_and_non_target_primary_categories(self):
+        paper = parse_rss(RSS)["1234.00001"]
+        client = FakeRssClient({"cs.AI": {
+            "new": paper,
+            "cross": {**paper, "announce_type": "cross"},
+            "replace": {**paper, "announce_type": "replace"},
+            "replace-cross": {**paper, "announce_type": "replace-cross"},
+            "other-primary": {**paper, "categories": ["cs.LG", "cs.AI"]},
+        }})
 
+        records = fetch_papers(["cs.AI"], client)
+
+        self.assertEqual([record["id"] for record in records], ["new", "cross"])
+
+    def test_empty_feed_is_valid_and_other_categories_are_still_fetched(self):
+        self.assertEqual(parse_rss(b'<rss version="2.0"><channel/></rss>'), {})
+        paper = parse_rss(RSS)["1234.00001"]
+        client = FakeRssClient({"cs.LG": {}, "cs.AI": {"1234.00001": paper}})
+        self.assertEqual(len(fetch_papers(["cs.LG", "cs.AI"], client)), 1)
+        self.assertEqual(fetch_papers(["cs.LG"], client), [])
+
+    def test_invalid_document_and_incomplete_metadata_fail(self):
+        for document in (
+            b"not XML", b"<html/>", b"<rss/>",
+            RSS.replace(b"First &amp; complete abstract.", b""),
+            RSS.replace(b"<category>cs.AI</category><category>cs.LG</category>", b""),
+        ):
+            with self.subTest(document=document), self.assertRaises(MetadataFetchError):
+                parse_rss(document)
+
+    def test_version_suffix_is_removed(self):
+        papers = parse_rss(RSS.replace(b"/abs/1234.00001", b"/abs/1234.00001v2"))
+        self.assertEqual(list(papers), ["1234.00001"])
+
+    def test_failed_category_does_not_return_partial_data(self):
+        client = Mock()
+        client.fetch_category.side_effect = [parse_rss(RSS), MetadataFetchError("unavailable")]
         with self.assertRaises(MetadataFetchError):
-            enrich_candidates(candidates, FakeRssClient({"cs.AI": {}}))
+            fetch_papers(["cs.AI", "cs.LG"], client)
+
+    def test_empty_configuration_is_rejected(self):
+        with self.assertRaises(ValueError):
+            fetch_papers(["", " "], FakeRssClient({}))
 
     def test_rss_client_retries_with_exponential_backoff(self):
         failed = requests.Response()
@@ -137,6 +152,34 @@ class EnrichTests(unittest.TestCase):
                 {"id": "1234.00001", "title": "test"},
             )
             self.assertFalse(output.with_suffix(".jsonl.tmp").exists())
+
+    def test_main_uses_categories_environment_and_writes_empty_output(self):
+        client = FakeRssClient({"cs.AI": {}})
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "papers.jsonl"
+            with (
+                patch.dict("os.environ", {"CATEGORIES": "cs.AI"}),
+                patch("sys.argv", ["enrich.py", "--output", str(output)]),
+                patch("daily_arxiv.daily_arxiv.enrich.RssClient", return_value=client),
+            ):
+                self.assertEqual(main(), 0)
+            self.assertTrue(output.exists())
+            self.assertEqual(output.read_text(), "")
+        self.assertEqual(client.calls, ["cs.AI"])
+
+    def test_fetch_failure_preserves_existing_output(self):
+        client = Mock()
+        client.fetch_category.side_effect = MetadataFetchError("unavailable")
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "papers.jsonl"
+            output.write_text("existing data\n")
+            with (
+                patch("sys.argv", ["enrich.py", "--categories", "cs.AI", "--output", str(output)]),
+                patch("daily_arxiv.daily_arxiv.enrich.RssClient", return_value=client),
+                self.assertRaises(MetadataFetchError),
+            ):
+                main()
+            self.assertEqual(output.read_text(), "existing data\n")
 
 
 if __name__ == "__main__":

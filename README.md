@@ -40,6 +40,21 @@ This repo will daily crawl arXiv papers about **cs.CV, cs.GR, cs.CL and cs.AI**,
 If you wish to crawl other arXiv categories, use other LLMs, or other languages, please follow the instructions.
 Otherwise, you can directly use this repo in https://huangpipip.github.io/daily-arXiv-ai-enhanced/. Please star it if you like :)
 
+Paper metadata and abstracts come exclusively from the official arXiv RSS feeds.
+Each configured category is fetched once, papers are deduplicated by arXiv ID,
+and only new/cross announcements whose primary category is in `CATEGORIES` are kept.
+Valid empty feeds skip AI processing; HTTP failures or malformed feeds are retried
+and stop the workflow if retries are exhausted. RSS has no paper comments field,
+so `comment` is `null`. The daily workflow runs at 07:30 UTC (15:30 China time),
+after the RSS refresh. Feed announcement/build dates are recorded in the logs.
+
+To fetch RSS data locally without running AI processing:
+
+```bash
+uv sync
+CATEGORIES="cs.AI, cs.LG" .venv/bin/python daily_arxiv/daily_arxiv/enrich.py --output /tmp/arxiv-rss.jsonl
+```
+
 **Instructions:**
 1. Fork this repo to your own account and delete my own information in [by-me-a-coffee](./buy-me-a-coffee/README.md).
 2. Go to: your-own-repo -> Settings -> Secrets and variables -> Actions
