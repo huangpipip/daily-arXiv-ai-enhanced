@@ -47,6 +47,13 @@ Valid empty feeds skip AI processing; HTTP failures or malformed feeds are retri
 and stop the workflow if retries are exhausted. RSS has no paper comments field,
 so `comment` is `null`. The daily workflow runs at 07:30 UTC (15:30 China time),
 after the RSS refresh. Feed announcement/build dates are recorded in the logs.
+Before crawling, the workflow loads published files from the `data` branch into
+a separate history directory. Deduplication checks the same day and previous
+seven UTC days; a same-day rerun skips already published IDs. If new papers arrive
+later that day, only those receive AI processing, then their results are merged
+with the day's published files before Markdown generation. Invalid history or
+input JSON stops the workflow. Workflow runs are serialized to avoid concurrent
+processing of the same papers.
 
 To fetch RSS data locally without running AI processing:
 

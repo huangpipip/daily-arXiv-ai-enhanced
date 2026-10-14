@@ -9,6 +9,9 @@ on:
     - cron: "30 7 * * *"
   workflow_dispatch:
 
+concurrency:
+  group: arxiv-daily-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -17,6 +20,16 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+    - name: Load published history
+      run: |
+        history_dir="$RUNNER_TEMP/arxiv-history"
+        mkdir -p "$history_dir/data"
+        data_ref=$(git ls-remote --heads origin data)
+        if [ -n "$data_ref" ]; then
+          git fetch origin data
+          git archive FETCH_HEAD data | tar -x -C "$history_dir"
+        fi
+        echo "ARXIV_HISTORY_DIR=$history_dir/data" >> "$GITHUB_ENV"
     - name: Install dependencies
       run: |
         curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -60,7 +73,10 @@ jobs:
         cd daily_arxiv
         # 执行去重检查脚本 / Execute intelligent deduplication check script
         set +e  # 暂时允许命令失败 / Temporarily allow command failure
-        python daily_arxiv/check_stats.py
+        python daily_arxiv/check_stats.py \
+          --input "../data/${{ steps.crawl_step.outputs.crawl_date }}.jsonl" \
+          --date "${{ steps.crawl_step.outputs.crawl_date }}" \
+          --history-dir "$ARXIV_HISTORY_DIR"
         
         # 获取退出码 / Get exit code
         dedup_exit_code=$?
@@ -111,6 +127,15 @@ jobs:
             exit 1
         fi
         echo "AI增强处理完成 / AI enhancement processing completed"
+
+    - name: Merge same-day published results
+      if: steps.dedup_check.outputs.has_new_content == 'true'
+      run: |
+        source .venv/bin/activate
+        python daily_arxiv/daily_arxiv/merge_daily.py \
+          --data-dir data --history-dir "$ARXIV_HISTORY_DIR" \
+          --date "${{ steps.crawl_step.outputs.crawl_date }}" \
+          --language "${{ vars.LANGUAGE }}"
         
     - name: Convert to Markdown
       if: steps.dedup_check.outputs.has_new_content == 'true'

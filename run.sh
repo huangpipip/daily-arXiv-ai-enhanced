@@ -1,4 +1,5 @@
 #!/bin/bash
+set -o pipefail
 
 # 本地测试脚本 / Local testing script
 # 主要工作流已迁移到 GitHub Actions (.github/workflows/run.yml)
@@ -63,6 +64,15 @@ echo "本地测试：爬取 $today 的arXiv论文... / Local test: Crawling $tod
 # 第一步：爬取数据 / Step 1: Crawl data
 echo "步骤1：开始爬取... / Step 1: Starting crawl..."
 
+history_root=$(mktemp -d) || exit 1
+trap 'rm -rf "$history_root"' EXIT
+mkdir -p "$history_root/data" || exit 1
+data_ref=$(git ls-remote --heads origin data) || exit 1
+if [ -n "$data_ref" ]; then
+    git fetch origin data || exit 1
+    git archive FETCH_HEAD data | tar -x -C "$history_root" || exit 1
+fi
+
 cd daily_arxiv
 # RSS 提供论文及摘要 / RSS provides papers and abstracts.
 python daily_arxiv/enrich.py \
@@ -75,7 +85,8 @@ fi
 
 # 第二步：检查去重 / Step 2: Check duplicates  
 echo "步骤2：执行去重检查... / Step 2: Performing intelligent deduplication check..."
-python daily_arxiv/check_stats.py
+python daily_arxiv/check_stats.py --input "../data/${today}.jsonl" \
+    --date "$today" --history-dir "$history_root/data"
 dedup_exit_code=$?
 
 case $dedup_exit_code in
@@ -110,6 +121,9 @@ if [ "$PARTIAL_MODE" = "false" ]; then
     fi
     echo "✅ AI增强处理完成 / AI enhancement processing completed"
     cd ..
+    python daily_arxiv/daily_arxiv/merge_daily.py \
+        --data-dir data --history-dir "$history_root/data" \
+        --date "$today" --language "$LANGUAGE" || exit 1
 else
     echo "⏭️  跳过AI处理（部分模式）/ Skipping AI processing (partial mode)"
 fi
